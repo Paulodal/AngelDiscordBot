@@ -319,8 +319,6 @@ async def RelatorioHoje(ctx):
 		ontem = dia_sys.strftime('%Y-%m-%d')
 		semana = semana_sys.strftime('%Y-%m-%d')
 
-		db.connect()
-
 		nome = []
 		evento = []
 		hora = []
