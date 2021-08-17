@@ -1,33 +1,31 @@
  # coding=utf-8
 
 from os import error
-from re import split
 import discord
+from peewee import *
 from discord.ext import commands, tasks
 import datetime
 from datetime import timedelta
+from datetime import date, time
 import json
 import pandas as pd
-from pymongo import collection
-from pymongo.message import insert, update
+# import smtplib
+# import mimetypes
+from email.message import EmailMessage
 from pytz import HOUR, timezone, utc
-
-def get_database():
-	from pymongo import MongoClient
-	fm = open('./mongostring.JSON')
-	token = json.load(fm)
-	CONNECTION_STRING = token
-	client = MongoClient(CONNECTION_STRING)
-	return client ['cvv_plantoes']
-
-if __name__ == "__main__":
-	CVV = get_database();
+from schema_efetivos import db, Voluntario, Plantao
 
 Client = discord.Client()
 client = commands.Bot(command_prefix = ["!"], case_insensitive=True)
-ft = open('./token.JSON')
+ft = open('./token_efet.JSON')
 token = json.load(ft)
 bot_token = token
+
+# Criando as tabelas de Sqlite
+db.create_tables([Voluntario])
+db.create_tables([Plantao])
+
+## A partir daqui, o bot está apenas mostrando que está conectado com uma mensagem printada diretamente no terminal.
 
 AVISO = "";
 
@@ -47,6 +45,8 @@ async def on_ready():
 		print ("O robô está conectado no servidor: {}".format(guild))
 	print("------")
 
+## A partir daqui, o Bot está ouvindo comandos e adicionando os dados no dataframe que foi criado lá em cima.
+## NOTA: alguns comandos estão repetidos para facilitar o envio de comandos pelos voluntários. Um exemplo é o comando "ajuda" e "Ajuda". Basta alterar um e copiar integralmente a alteração para o mesmo.
 
 @client.command()
 async def ajuda(ctx):
@@ -59,151 +59,207 @@ async def on_command_error(message, error):
 
 @client.command()
 async def regular(ctx):
-	db = CVV["cvv_registros"]
-	agora = datetime.datetime.now(timezone('America/Sao_Paulo'))
-	nome = ctx.message.author.name
-	registro = {
-		'nome': nome,
-		'hora_sistema': agora,
-		'tipo': "início regular",
-		'dia': agora.strftime('%d/%m/%Y'),
-		'hora': agora.strftime('%H:%M:%S')
-		}
+	hour_sys = datetime.datetime.now()
+	hour = hour_sys.strftime("%H:%M:%S")
+	dia = hour_sys.strftime('%Y-%m-%d')
+	id = ctx.message.author.id
+	nome = ctx.message.author.display_name
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(":octagonal_sign: Não posso registrar comandos por DM. Peço que registre seu comando no canal <#741743872060817440>. Gratidão! :octagonal_sign:")
-	else:
-		db.insert_one(registro)
+	else: 
+		try: 
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		except Exception as e:
+			Voluntario.create(
+			id_vol = id,
+			nome = nome)
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		Plantao.create(
+		id_vol = busca_voluntario.id,
+		tipo = 'inicio regular',
+		dia = dia,
+		hora = hour,
+		)
 		await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + "! Seu plantão **regular** começou. Gratidão!")
 
 @client.command()
 async def extra(ctx):
-	db = CVV["cvv_registros"]
-	agora = datetime.datetime.now(timezone('America/Sao_Paulo'))
-	nome = ctx.message.author.name
-	registro = {
-		'nome': nome,
-		'hora_sistema': agora,
-		'tipo': "início extra",
-		'dia': agora.strftime('%d/%m/%Y'),
-		'hora': agora.strftime('%H:%M:%S')
-		}
+	hour_sys = datetime.datetime.now()
+	hour = hour_sys.strftime("%H:%M:%S")
+	dia = hour_sys.strftime('%Y-%m-%d')
+	id = ctx.message.author.id
+	nome = ctx.message.author.display_name
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(":octagonal_sign: Não posso registrar comandos por DM. Peço que registre seu comando no canal <#741743872060817440>. Gratidão! :octagonal_sign:")
-	else:
-		db.insert_one(registro)
+	else: 
+		try: 
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		except Exception as e:
+			Voluntario.create(
+			id_vol = id,
+			nome = nome)
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		Plantao.create(
+		id_vol = busca_voluntario.id,
+		tipo = 'inicio extra',
+		dia = dia,
+		hora = hour,
+		)
 		await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + "! Seu plantão **extra** começou. Gratidão!")
 
 @client.command()
 async def reposição(ctx):
-	db = CVV["cvv_registros"]
-	agora = datetime.datetime.now(timezone('America/Sao_Paulo'))
-	nome = ctx.message.author.name
-	registro = {
-		'nome': nome,
-		'hora_sistema': agora,
-		'tipo': "início reposição",
-		'dia': agora.strftime('%d/%m/%Y'),
-		'hora': agora.strftime('%H:%M:%S')
-		}
+	hour_sys = datetime.datetime.now()
+	hour = hour_sys.strftime("%H:%M:%S")
+	dia = hour_sys.strftime('%Y-%m-%d')
+	id = ctx.message.author.id
+	nome = ctx.message.author.display_name
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(":octagonal_sign: Não posso registrar comandos por DM. Peço que registre seu comando no canal <#741743872060817440>. Gratidão! :octagonal_sign:")
-	else:
-		db.insert_one(registro)
+	else: 
+		try: 
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		except Exception as e:
+			Voluntario.create(
+			id_vol = id,
+			nome = nome)
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		Plantao.create(
+		id_vol = busca_voluntario.id,
+		tipo = 'inicio reposição',
+		dia = dia,
+		hora = hour,
+		)
 		await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + "! Seu plantão **de reposição** começou. Gratidão!")
 
 @client.command()
 async def pausa(ctx):
-	db = CVV["cvv_registros"]
-	agora = datetime.datetime.now(timezone('America/Sao_Paulo'))
-	nome = ctx.message.author.name
-	registro = {
-		'nome': nome,
-		'hora_sistema': agora,
-		'tipo': "início pausa",
-		'dia': agora.strftime('%d/%m/%Y'),
-		'hora': agora.strftime('%H:%M:%S')
-		}
+	hour_sys = datetime.datetime.now()
+	hour = hour_sys.strftime("%H:%M:%S")
+	dia = hour_sys.strftime('%Y-%m-%d')
+	id = ctx.message.author.id
+	nome = ctx.message.author.display_name
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(":octagonal_sign: Não posso registrar comandos por DM. Peço que registre seu comando no canal <#741743872060817440>. Gratidão! :octagonal_sign:")
-	else:
-		db.insert_one(registro)
+	else: 
+		try: 
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		except Exception as e:
+			Voluntario.create(
+			id_vol = id,
+			nome = nome)
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		Plantao.create(
+		id_vol = busca_voluntario.id,
+		tipo = 'inicio pausa',
+		dia = dia,
+		hora = hour,
+		)
 		await ctx.message.author.send("Vamos começar sua pausa, " + str(ctx.message.author.name) + "! Lembre-se do limite de 10 minutos de pausa (para voluntários de 3h) e 5 minutos (para voluntários de 1h30min) :)")
 	
 @client.command()
 async def voltei(ctx):
-	db = CVV["cvv_registros"]
-	agora = datetime.datetime.now(timezone('America/Sao_Paulo'))
-	nome = ctx.message.author.name
-	registro = {
-		'nome': nome,
-		'hora_sistema': agora,
-		'tipo': "fim pausa",
-		'dia': agora.strftime('%d/%m/%Y'),
-		'hora': agora.strftime('%H:%M:%S')
-		}
+	hour_sys = datetime.datetime.now()
+	hour = hour_sys.strftime("%H:%M:%S")
+	dia = hour_sys.strftime('%Y-%m-%d')
+	id = ctx.message.author.id
+	nome = ctx.message.author.display_name
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(":octagonal_sign: Não posso registrar comandos por DM. Peço que registre seu comando no canal <#741743872060817440>. Gratidão! :octagonal_sign:")
-	else:
-		db.insert_one(registro)
+	else: 
+		try: 
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		except Exception as e:
+			Voluntario.create(
+			id_vol = id,
+			nome = nome)
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		Plantao.create(
+		id_vol = busca_voluntario.id,
+		tipo = 'retorno pausa',
+		dia = dia,
+		hora = hour,
+		)
 		await ctx.message.author.send("Ok, " + str(ctx.message.author.name) + ". Já anotei seu retorno.")
 	
 @client.command()
 async def terminei(ctx):
-	db = CVV["cvv_registros"]
-	agora = datetime.datetime.now(timezone('America/Sao_Paulo'))
-	nome = ctx.message.author.name
-	aviso = AVISO
-	registro = {
-		'nome': nome,
-		'hora_sistema': agora,
-		'tipo': "fim de plantão",
-		'dia': agora.strftime('%d/%m/%Y'),
-		'hora': agora.strftime('%H:%M:%S')
-		}
+	hour_sys = datetime.datetime.now()
+	hour = hour_sys.strftime("%H:%M:%S")
+	dia = hour_sys.strftime('%Y-%m-%d')
+	id = ctx.message.author.id
+	nome = ctx.message.author.display_name
+	aviso = AVISO # esse aviso é alterado com o comando "!alteraaviso", e apenas admins podem usar esse comando
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(":octagonal_sign: Não posso registrar comandos por DM. Peço que registre seu comando no canal <#741743872060817440>. Gratidão! :octagonal_sign:")
-	else:
-		db.insert_one(registro)
+	else: 
+		try: 
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		except Exception as e:
+			Voluntario.create(
+			id_vol = id,
+			nome = nome)
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		Plantao.create(
+		id_vol = busca_voluntario.id,
+		tipo = 'fim de plantão',
+		dia = dia,
+		hora = hour,
+		)
 		await ctx.message.author.send(str(ctx.message.author.name) + TextoFim + "\n" + aviso)
 	
 @client.command()
 async def substituindo(ctx):
-	db = CVV["cvv_registros"]
-	agora = datetime.datetime.now(timezone('America/Sao_Paulo'))
-	nome = ctx.message.author.name
+	hour_sys = datetime.datetime.now()
+	hour = hour_sys.strftime("%H:%M:%S")
+	dia = hour_sys.strftime('%Y-%m-%d')
+	id = ctx.message.author.id
+	nome = ctx.message.author.display_name
 	nome_subs = str(ctx.message.content).strip("!substituindo ")
-	registro = {
-		'nome': nome,
-		'hora_sistema': agora,
-		'tipo': "fim de plantão",
-		'dia': agora.strftime('%d/%m/%Y'),
-		'hora': agora.strftime('%H:%M:%S'),
-		'substituiu': nome_subs
-		}
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(":octagonal_sign: Não posso registrar comandos por DM. Peço que registre seu comando no canal <#741743872060817440>. Gratidão! :octagonal_sign:")
-	else:
-		db.insert_one(registro)
+	else: 
+		try: 
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		except Exception as e:
+			Voluntario.create(
+			id_vol = id,
+			nome = nome)
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		Plantao.create(
+		id_vol = busca_voluntario.id,
+		tipo = 'inicio substituicao',
+		dia = dia,
+		hora = hour,
+		comentario = nome_subs
+		)
 		await ctx.message.author.send(str(ctx.message.author.name) + ", entendi que você está substituindo " + nome_subs + " e estou anotando essa substituição. Gratidão!")
 
 @client.command()
 async def apoio(ctx):
-	db = CVV["cvv_registros"]
-	agora = datetime.datetime.now(timezone('America/Sao_Paulo'))
-	nome = ctx.message.author.name
+	hour_sys = datetime.datetime.now()
+	hour = hour_sys.strftime("%H:%M:%S")
+	dia = hour_sys.strftime('%Y-%m-%d')
+	id = ctx.message.author.id
+	nome = ctx.message.author.display_name
 	software = str(ctx.message.content).strip("!substituindo ")
-	registro = {
-		'nome': nome,
-		'hora_sistema': agora,
-		'tipo': "fim de plantão",
-		'dia': agora.strftime('%d/%m/%Y'),
-		'hora': agora.strftime('%H:%M:%S'),
-		'software': software
-		}
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(":octagonal_sign: Não posso registrar comandos por DM. Peço que registre seu comando no canal <#741743872060817440>. Gratidão! :octagonal_sign:")
-	else:
-		db.insert_one(registro)
+	else: 
+		try: 
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		except Exception as e:
+			Voluntario.create(
+			id_vol = id,
+			nome = nome)
+			busca_voluntario = Voluntario.get(Voluntario.id_vol==id)
+		Plantao.create(
+		id_vol = busca_voluntario.id,
+		tipo = 'retorno pausa',
+		dia = dia,
+		hora = hour,
+		comentario = software
+		)
 		await ctx.message.author.send(str(ctx.message.author.name) + ", entendi que você está fazendo um apoio usando o software " + software + " e estou anotando esse apoio. Gratidão!")
 
 @client.command()
@@ -250,5 +306,53 @@ async def alteraaviso(ctx):
 		return await ctx.send(str(ctx.message.author.mention) + " Ok! Adicionei um aviso para os voluntários quando eles terminarem seus plantões :)");
 	await ctx.send(str(ctx.message.author.mention) + " Desculpe, mas você não tem autorização para mudar avisos no fim dos plantões. Por favor contate a equipe de Desenvolvimento de TI");
 
+@client.command()
+async def RelatorioHoje(ctx):
+	f = open('./admins.JSON', 'r+')
+	data = json.load(f)
+	if ctx.author.id in data:
+		td = timedelta(hours=24)
+		td_semana = timedelta(days=7)
+		dia_sys = datetime.datetime.now(timezone('America/Sao_Paulo')) - td
+		semana_sys = datetime.datetime.now(timezone('America/Sao_Paulo')) - td_semana
+		hoje = datetime.datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d')
+		ontem = dia_sys.strftime('%Y-%m-%d')
+		semana = semana_sys.strftime('%Y-%m-%d')
+
+		db.connect()
+
+		nome = []
+		evento = []
+		hora = []
+		comentario = []
+		dia = []
+
+		for row in Voluntario.select(
+			Voluntario.nome, 
+			Plantao.tipo, 
+			Plantao.hora, 
+			Plantao.dia
+			).join(Plantao
+			).where(Plantao.dia == hoje):
+			# coloca no array plantoes pra buscar CADA NOME encontrado na DB
+			nome.append(row.nome)
+			evento.append(row.plantao.tipo)
+			hora.append(row.plantao.hora)
+			comentario.append(row.plantao.comentario)
+			dia.append(row.plantao.dia)
+			df = pd.DataFrame({
+				'Nome':nome,
+				'Evento':evento,
+				'Hora':hora,
+				'Comentário':comentario,
+				'Dia':dia
+			})
+			df.to_excel('./relatorios/Relatorio_Diario_Efetivos.xlsx')#, index_label=False, index=False, header=True)
+			file = discord.File('./relatorios/Relatorio_Diario_Efetivos.xlsx')
+			
+			await ctx.message.author.send(str(ctx.message.author.mention) + ": aqui está o relatório de plantões diário")
+			await ctx.message.author.send(file=file)
+		else:
+			await ctx.send(str(ctx.message.author.mention) + " Desculpe, mas você não tem autorização para solicitar relatórios. Por favor contate a equipe de Desenvolvimento de TI")
 
 client.run(bot_token)
