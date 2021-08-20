@@ -59,7 +59,7 @@ async def on_command_error(message, error):
 
 @client.command()
 async def regular(ctx):
-	hour_sys = datetime.datetime.now(timezone('America/Sao_Paulo'))
+	hour_sys = datetime.datetime.now(timezone('America/Sao_Paulo')) 
 	hour = hour_sys.strftime("%H:%M:%S")
 	dia = hour_sys.strftime('%Y-%m-%d')
 	id = ctx.message.author.id
