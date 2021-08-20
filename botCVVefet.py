@@ -422,7 +422,7 @@ async def RelatorioSemanal(ctx):
 		for row in Voluntario.select(
 			Voluntario.nome, 
 			Plantao.tipo, 
-			Plantao.hora, 
+			Plantao.hora,
 			Plantao.dia
 			).join(Plantao
 			).where(Plantao.dia > semana):
