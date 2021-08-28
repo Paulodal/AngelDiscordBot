@@ -391,97 +391,99 @@ async def RelatorioHoje(ctx):
 
 @client.command()
 async def RelatorioOntem(ctx):
-	f = open('./admins.JSON', 'r+')
-	data = json.load(f)
-	if ctx.author.id in data:
-		td = timedelta(hours=24)
-		td_semana = timedelta(days=7)
-		dia_sys = datetime.datetime.now(timezone('America/Sao_Paulo')) - td
-		semana_sys = datetime.datetime.now(timezone('America/Sao_Paulo')) - td_semana
-		hoje = datetime.datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d')
-		ontem = dia_sys.strftime('%Y-%m-%d')
-		semana = semana_sys.strftime('%Y-%m-%d')
+	global tz
 
-		nome = []
-		evento = []
-		hora = []
-		comentario = []
-		dia = []
+	if not is_admin(ctx):
+		await ctx.send(
+			str(ctx.message.author.mention) + " Desculpe, mas você não tem autorização para solicitar relatórios. " +
+			"Por favor contate a equipe de Desenvolvimento de TI")
+		return
 
-		for row in Voluntario.select(
+	dia_sys = datetime.datetime.now(tz) - timedelta(hours=24)
+	ontem = dia_sys.strftime('%Y-%m-%d')
+
+	nome = []
+	evento = []
+	hora = []
+	comentario = []
+	dia = []
+
+	plantoes = Plantao.select(
 			Voluntario.nome,
 			Plantao.tipo,
 			Plantao.hora,
 			Plantao.dia
-			).join(Plantao
-			).where(Plantao.dia == ontem):
-			# coloca no array plantoes pra buscar CADA NOME encontrado na DB
-			nome.append(row.nome)
-			evento.append(row.plantao.tipo)
-			hora.append(row.plantao.hora)
-			comentario.append(row.plantao.comentario)
-			dia.append(row.plantao.dia)
-		df = pd.DataFrame({
-			'Nome':nome,
-			'Evento':evento,
-			'Hora':hora,
-			'Comentário':comentario,
-			'Dia':dia
-		})
-		df.to_excel('./relatorios/Relatorio_Ontem_Efetivos.xlsx', index_label=False, index=False, header=True)
-		file = discord.File('./relatorios/Relatorio_Ontem_Efetivos.xlsx')
+		).join(Voluntario, on=(Plantao.voluntario_id == Voluntario.id).alias('voluntario')).where(Plantao.dia == ontem)
 
-		await ctx.message.author.send(str(ctx.message.author.mention) + ": aqui está o relatório de plantões de **ontem**!")
-		await ctx.message.author.send(file=file)
-	else:
-		await ctx.send(str(ctx.message.author.mention) + " Desculpe, mas você não tem autorização para solicitar relatórios. Por favor contate a equipe de Desenvolvimento de TI")
+	for row in plantoes:
+		# coloca no array plantoes pra buscar CADA NOME encontrado na DB
+		nome.append(row.voluntario.nome)
+		evento.append(row.tipo)
+		hora.append(row.hora)
+		comentario.append(row.comentario)
+		dia.append(row.dia)
+
+	df = pd.DataFrame({
+		'Nome':nome,
+		'Evento':evento,
+		'Hora':hora,
+		'Comentário':comentario,
+		'Dia':dia
+	})
+
+	df.to_excel('./relatorios/Relatorio_Ontem_Efetivos.xlsx', index_label=False, index=False, header=True)
+	file = discord.File('./relatorios/Relatorio_Ontem_Efetivos.xlsx')
+
+	await ctx.message.author.send(str(ctx.message.author.mention) + ": aqui está o relatório de plantões de **ontem**!")
+	await ctx.message.author.send(file=file)
 
 
 @client.command()
 async def RelatorioSemanal(ctx):
-	f = open('./admins.JSON', 'r+')
-	data = json.load(f)
-	if ctx.author.id in data:
-		td = timedelta(hours=24)
-		td_semana = timedelta(days=7)
-		dia_sys = datetime.datetime.now(timezone('America/Sao_Paulo')) - td
-		semana_sys = datetime.datetime.now(timezone('America/Sao_Paulo')) - td_semana
-		hoje = datetime.datetime.now(timezone('America/Sao_Paulo')).strftime('%Y-%m-%d')
-		ontem = dia_sys.strftime('%Y-%m-%d')
-		semana = semana_sys.strftime('%Y-%m-%d')
+	global tz
 
-		nome = []
-		evento = []
-		hora = []
-		comentario = []
-		dia = []
+	if not is_admin(ctx):
+		await ctx.send(
+			str(ctx.message.author.mention) + " Desculpe, mas você não tem autorização para solicitar relatórios. " +
+			"Por favor contate a equipe de Desenvolvimento de TI")
+		return
 
-		for row in Voluntario.select(
+	semana_sys = datetime.datetime.now(timezone('America/Sao_Paulo')) - timedelta(days=7)
+	semana = semana_sys.strftime('%Y-%m-%d')
+
+	nome = []
+	evento = []
+	hora = []
+	comentario = []
+	dia = []
+
+	plantoes = Plantao.select(
 			Voluntario.nome,
 			Plantao.tipo,
 			Plantao.hora,
 			Plantao.dia
-			).join(Plantao
-			).where(Plantao.dia > semana):
-			# coloca no array plantoes pra buscar CADA NOME encontrado na DB
-			nome.append(row.nome)
-			evento.append(row.plantao.tipo)
-			hora.append(row.plantao.hora)
-			comentario.append(row.plantao.comentario)
-			dia.append(row.plantao.dia)
-			df = pd.DataFrame({
-				'Nome':nome,
-				'Evento':evento,
-				'Hora':hora,
-				'Comentário':comentario,
-				'Dia':dia
-			})
-		df.to_excel('./relatorios/Relatorio_Semanal_Efetivos.xlsx', index_label=False, index=False, header=True)
-		file = discord.File('./relatorios/Relatorio_Semanal_Efetivos.xlsx')
+		).join(Voluntario, on=(Plantao.voluntario_id == Voluntario.id).alias('voluntario')).where(Plantao.dia > semana)
 
-		await ctx.message.author.send(str(ctx.message.author.mention) + ": aqui está o relatório de plantões semanal!")
-		await ctx.message.author.send(file=file)
-	else:
-		await ctx.send(str(ctx.message.author.mention) + " Desculpe, mas você não tem autorização para solicitar relatórios. Por favor contate a equipe de Desenvolvimento de TI")
+	for row in plantoes:
+		# coloca no array plantoes pra buscar CADA NOME encontrado na DB
+		nome.append(row.voluntario.nome)
+		evento.append(row.tipo)
+		hora.append(row.hora)
+		comentario.append(row.comentario)
+		dia.append(row.dia)
+
+	df = pd.DataFrame({
+		'Nome':nome,
+		'Evento':evento,
+		'Hora':hora,
+		'Comentário':comentario,
+		'Dia':dia
+	})
+
+	df.to_excel('./relatorios/Relatorio_Semanal_Efetivos.xlsx', index_label=False, index=False, header=True)
+	file = discord.File('./relatorios/Relatorio_Semanal_Efetivos.xlsx')
+
+	await ctx.message.author.send(str(ctx.message.author.mention) + ": aqui está o relatório de plantões semanal!")
+	await ctx.message.author.send(file=file)
 
 client.run(bot_token)
