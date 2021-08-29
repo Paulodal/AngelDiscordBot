@@ -65,6 +65,11 @@ TextoNoDM = (":octagonal_sign: Não posso registrar comandos por DM. "
 			"Peço que registre seu comando no canal <#741743872060817440>. Gratidão! :octagonal_sign:")
 
 tz = timezone('America/Sao_Paulo')
+date_mask = '%Y-%m-%d'
+time_mask = '%H:%M:%S'
+date_time_mask = date_mask + ' ' + time_mask
+sod = ' 00:00:00'
+eod = ' 23:59:59'
 
 
 def busca_voluntario(ctx):
@@ -115,7 +120,9 @@ async def on_command_error(message, error):
 async def regular(ctx):
 	global tz
 	hour_sys = datetime.datetime.now(tz) #fixed a bug
-	discord_id = ctx.message.author.id
+	hoje = hour_sys.strftime(date_mask)
+	ontem_sys = hour_sys - timedelta(hours=24)
+	ontem = ontem_sys.strftime(date_mask)
 
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(TextoNoDM)
@@ -123,14 +130,38 @@ async def regular(ctx):
 
 	voluntario = busca_voluntario(ctx)
 
-	Plantao.create(
-		voluntario_id = voluntario.id,
-		tipo = 'inicio regular',
-		dia = hour_sys.strftime('%Y-%m-%d'),
-		hora = hour_sys.strftime("%H:%M:%S"),
-	)
+	try:
+		plantao = (Plantao
+				.select()
+				.where(
+					(Plantao.voluntario_id == voluntario.id) &
+					(Plantao.inicio >= ontem + sod) &
+					(Plantao.inicio <= hoje + eod)
+				)
+				.order_by(Plantao.inicio.desc())
+				.get())
 
-	await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + "! Seu plantão **regular** começou. Gratidão!")
+		if plantao.fim == None:
+			status = 'UNFINISHED_EXISTS'
+		else:
+			Plantao.create(
+				voluntario_id = voluntario.id,
+				tipo = 'regular',
+				inicio = hour_sys.strftime(date_time_mask),
+			)
+			status = 'OK'
+	except Exception as e:
+		Plantao.create(
+			voluntario_id = voluntario.id,
+			tipo = 'regular',
+			inicio = hour_sys.strftime(date_time_mask),
+		)
+		status = 'OK'
+
+	if status == 'OK':
+		await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + "! Seu plantão **regular** começou. Gratidão!")
+	elif status == 'UNFINISHED_EXISTS':
+		await ctx.send(str(ctx.message.author.mention) + " já existe um plantão que foi iniciado sem ter sido terminado, comando ignorado.")
 
 
 @client.command()
@@ -146,9 +177,8 @@ async def extra(ctx):
 
 	Plantao.create(
 		voluntario_id = voluntario.id,
-		tipo = 'inicio extra',
-		dia = hour_sys.strftime('%Y-%m-%d'),
-		hora = hour_sys.strftime("%H:%M:%S"),
+		tipo = 'extra',
+		inicio = hour_sys.strftime(date_time_mask),
 	)
 
 	await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + "! Seu plantão **extra** começou. Gratidão!")
@@ -167,9 +197,8 @@ async def reposição(ctx):
 
 	Plantao.create(
 		voluntario_id = voluntario.id,
-		tipo = 'inicio reposição',
-		dia = hour_sys.strftime('%Y-%m-%d'),
-		hora = hour_sys.strftime("%H:%M:%S"),
+		tipo = 'reposição',
+		inicio = hour_sys.strftime(date_time_mask),
 	)
 
 	await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + "! Seu plantão **de reposição** começou. Gratidão!")
@@ -179,6 +208,9 @@ async def reposição(ctx):
 async def pausa(ctx):
 	global tz
 	hour_sys = datetime.datetime.now(tz)
+	hoje = hour_sys.strftime(date_mask)
+	ontem_sys = hour_sys - timedelta(hours=24)
+	ontem = ontem_sys.strftime(date_mask)
 
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(TextoNoDM)
@@ -186,20 +218,41 @@ async def pausa(ctx):
 
 	voluntario = busca_voluntario(ctx)
 
-	Plantao.create(
-		voluntario_id = voluntario.id,
-		tipo = 'inicio pausa',
-		dia = hour_sys.strftime('%Y-%m-%d'),
-		hora = hour_sys.strftime("%H:%M:%S"),
-	)
+	try:
+		plantao = (Plantao
+				.select()
+				.where(
+					(Plantao.voluntario_id == voluntario.id) &
+					(Plantao.inicio >= ontem + sod) &
+					(Plantao.inicio <= hoje + eod)
+				)
+				.order_by(Plantao.inicio.desc())
+				.get())
 
-	await ctx.message.author.send("Vamos começar sua pausa, " + str(ctx.message.author.name) + "! Lembre-se do limite de 10 minutos de pausa (para voluntários de 3h) e 5 minutos (para voluntários de 1h30min) :)")
+		if plantao.retorno != None:
+			status = 'RETORNO_EXISTS'
+		else:
+			plantao.pausa = hour_sys.strftime(date_time_mask)
+			plantao.save()
+			status = 'OK'
+	except Exception as e:
+		status = 'INICIO_NOT_FOUND'
+
+	if status == 'OK':
+		await ctx.message.author.send("Vamos começar sua pausa, " + str(ctx.message.author.name) + "! Lembre-se do limite de 10 minutos de pausa (para voluntários de 3h) e 5 minutos (para voluntários de 1h30min) :)")
+	elif status == 'INICIO_NOT_FOUND':
+		await ctx.send(str(ctx.message.author.mention) + " seu registro de início do plantão não foi encontrado, comando ignorado.")
+	elif status == 'RETORNO_EXISTS':
+		await ctx.send(str(ctx.message.author.mention) + " você já registrou o retorno da sua pausa, comando ignorado.")
 
 
 @client.command()
 async def voltei(ctx):
 	global tz
 	hour_sys = datetime.datetime.now(tz)
+	hoje = hour_sys.strftime(date_mask)
+	ontem_sys = hour_sys - timedelta(hours=24)
+	ontem = ontem_sys.strftime(date_mask)
 
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(TextoNoDM)
@@ -207,20 +260,41 @@ async def voltei(ctx):
 
 	voluntario = busca_voluntario(ctx)
 
-	Plantao.create(
-		voluntario_id = voluntario.id,
-		tipo = 'retorno pausa',
-		dia = hour_sys.strftime('%Y-%m-%d'),
-		hora = hour_sys.strftime("%H:%M:%S"),
-	)
+	try:
+		plantao = (Plantao
+				.select()
+				.where(
+					(Plantao.voluntario_id == voluntario.id) &
+					(Plantao.inicio >= ontem + sod) &
+					(Plantao.inicio <= hoje + eod)
+				)
+				.order_by(Plantao.inicio.desc())
+				.get())
 
-	await ctx.message.author.send("Ok, " + str(ctx.message.author.name) + ". Já anotei seu retorno.")
+		if plantao.pausa == None:
+			status = 'PAUSA_NOT_FOUND'
+		else:
+			plantao.retorno = hour_sys.strftime(date_time_mask)
+			plantao.save()
+			status = 'OK'
+	except Exception as e:
+		status = 'INICIO_NOT_FOUND'
+
+	if status == 'OK':
+		await ctx.message.author.send("Ok, " + str(ctx.message.author.name) + ". Já anotei seu retorno.")
+	elif status == 'INICIO_NOT_FOUND':
+		await ctx.send(str(ctx.message.author.mention) + " seu registro de início do plantão não foi encontrado, comando ignorado.")
+	elif status == 'PAUSA_NOT_FOUND':
+		await ctx.send(str(ctx.message.author.mention) + " seu registro de início da pausa não foi encontrado.")
 
 
 @client.command()
 async def terminei(ctx):
 	global tz, AVISO
 	hour_sys = datetime.datetime.now(tz)
+	hoje = hour_sys.strftime(date_mask)
+	ontem_sys = hour_sys - timedelta(hours=24)
+	ontem = ontem_sys.strftime(date_mask)
 
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(TextoNoDM)
@@ -228,14 +302,36 @@ async def terminei(ctx):
 
 	voluntario = busca_voluntario(ctx)
 
-	Plantao.create(
-		voluntario_id = voluntario.id,
-		tipo = 'fim de plantão',
-		dia = hour_sys.strftime('%Y-%m-%d'),
-		hora = hour_sys.strftime("%H:%M:%S"),
-	)
+	try:
+		plantao = (Plantao
+				.select()
+				.where(
+					(Plantao.voluntario_id == voluntario.id) &
+					(Plantao.inicio >= ontem + sod) &
+					(Plantao.inicio <= hoje + eod)
+				)
+				.order_by(Plantao.inicio.desc())
+				.get())
 
-	await ctx.message.author.send(str(ctx.message.author.name) + TextoFim + "\n" + AVISO)
+		if plantao.pausa != None and plantao.retorno == None:
+			status = 'RETORNO_NOT_FOUND'
+		elif plantao.inicio != None and plantao.fim != None:
+			status = 'ALREADY_FINISHED'
+		else:
+			plantao.fim = hour_sys.strftime(date_time_mask)
+			plantao.save()
+			status = 'OK'
+	except Exception as e:
+		status = 'INICIO_NOT_FOUND'
+
+	if status == 'OK':
+		await ctx.message.author.send(str(ctx.message.author.name) + TextoFim + "\n" + AVISO)
+	elif status == 'INICIO_NOT_FOUND':
+		await ctx.send(str(ctx.message.author.mention) + " seu registro de início do plantão não foi encontrado, comando ignorado.")
+	elif status == 'RETORNO_NOT_FOUND':
+		await ctx.send(str(ctx.message.author.mention) + " seu registro de retorno da pausa não foi encontrado, comando ignorado")
+	elif status == 'ALREADY_FINISHED':
+		await ctx.send(str(ctx.message.author.mention) + " seu plantão já foi terminado anteriormente, comando ignorado")
 
 
 @client.command()
@@ -253,7 +349,7 @@ async def substituindo(ctx):
 	Plantao.create(
 		voluntario_id = voluntario.id,
 		tipo = 'inicio substituicao',
-		dia = hour_sys.strftime('%Y-%m-%d'),
+		dia = hour_sys.strftime(date_mask),
 		hora = hour_sys.strftime("%H:%M:%S"),
 		comentario = nome_subs
 	)
@@ -278,7 +374,7 @@ async def apoio(ctx):
 	Plantao.create(
 		voluntario_id = voluntario.id,
 		tipo = 'retorno pausa',
-		dia = hour_sys.strftime('%Y-%m-%d'),
+		dia = hour_sys.strftime(date_mask),
 		hora = hour_sys.strftime("%H:%M:%S"),
 		comentario = software
 	)
@@ -351,7 +447,7 @@ async def RelatorioHoje(ctx):
 			"Por favor contate a equipe de Desenvolvimento de TI")
 		return
 
-	hoje = datetime.datetime.now(tz).strftime('%Y-%m-%d')
+	hoje = datetime.datetime.now(tz).strftime(date_mask)
 
 	nome = []
 	evento = []
@@ -400,7 +496,7 @@ async def RelatorioOntem(ctx):
 		return
 
 	dia_sys = datetime.datetime.now(tz) - timedelta(hours=24)
-	ontem = dia_sys.strftime('%Y-%m-%d')
+	ontem = dia_sys.strftime(date_mask)
 
 	nome = []
 	evento = []
@@ -449,7 +545,7 @@ async def RelatorioSemanal(ctx):
 		return
 
 	semana_sys = datetime.datetime.now(timezone('America/Sao_Paulo')) - timedelta(days=7)
-	semana = semana_sys.strftime('%Y-%m-%d')
+	semana = semana_sys.strftime(date_mask)
 
 	nome = []
 	evento = []
