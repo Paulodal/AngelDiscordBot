@@ -67,6 +67,7 @@ TextoNoDM = (":octagonal_sign: Não posso registrar comandos por DM. "
 tz = timezone('America/Sao_Paulo')
 date_mask = '%Y-%m-%d'
 time_mask = '%H:%M:%S'
+time_mask_report = '%H:%M'
 date_time_mask = date_mask + ' ' + time_mask
 sod = ' 00:00:00'
 eod = ' 23:59:59'
@@ -93,6 +94,43 @@ def is_admin(ctx):
 	else:
 		return False
 
+
+def register_start(voluntario, tipo):
+	global tz
+	hour_sys = datetime.datetime.now(tz) #fixed a bug
+	hoje = hour_sys.strftime(date_mask)
+	ontem_sys = hour_sys - timedelta(hours=24)
+	ontem = ontem_sys.strftime(date_mask)
+
+	try:
+		plantao = (Plantao
+				.select()
+				.where(
+					(Plantao.voluntario_id == voluntario.id) &
+					(Plantao.inicio >= ontem + sod) &
+					(Plantao.inicio <= hoje + eod)
+				)
+				.order_by(Plantao.inicio.desc())
+				.get())
+
+		if plantao.fim == None:
+			status = 'UNFINISHED_EXISTS'
+		else:
+			Plantao.create(
+				voluntario_id = voluntario.id,
+				tipo = tipo,
+				inicio = hour_sys.strftime(date_time_mask),
+			)
+			status = 'OK'
+	except Exception as e:
+		Plantao.create(
+			voluntario_id = voluntario.id,
+			tipo = 'regular',
+			inicio = hour_sys.strftime(date_time_mask),
+		)
+		status = 'OK'
+
+	return status
 
 def prep_excel_data(dia_inicio, dia_fim):
 		nome = []
@@ -121,10 +159,10 @@ def prep_excel_data(dia_inicio, dia_fim):
 			nome.append(row.voluntario.nome)
 			evento.append(row.tipo)
 			dia.append(row.inicio.strftime(date_mask))
-			inicio.append(row.inicio.strftime(time_mask))
-			pausa.append(row.pausa.strftime(time_mask) if row.pausa != None else '')
-			retorno.append(row.retorno.strftime(time_mask) if row.retorno != None else '')
-			fim.append(row.fim.strftime(time_mask))
+			inicio.append(row.inicio.strftime(time_mask_report))
+			pausa.append(row.pausa.strftime(time_mask_report) if row.pausa != None else '')
+			retorno.append(row.retorno.strftime(time_mask_report) if row.retorno != None else '')
+			fim.append(row.fim.strftime(time_mask_report))
 			comentario.append(row.comentario)
 
 		df = pd.DataFrame({
@@ -165,45 +203,13 @@ async def on_command_error(message, error):
 
 @client.command()
 async def regular(ctx):
-	global tz
-	hour_sys = datetime.datetime.now(tz) #fixed a bug
-	hoje = hour_sys.strftime(date_mask)
-	ontem_sys = hour_sys - timedelta(hours=24)
-	ontem = ontem_sys.strftime(date_mask)
-
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(TextoNoDM)
 		return
 
 	voluntario = busca_voluntario(ctx)
 
-	try:
-		plantao = (Plantao
-				.select()
-				.where(
-					(Plantao.voluntario_id == voluntario.id) &
-					(Plantao.inicio >= ontem + sod) &
-					(Plantao.inicio <= hoje + eod)
-				)
-				.order_by(Plantao.inicio.desc())
-				.get())
-
-		if plantao.fim == None:
-			status = 'UNFINISHED_EXISTS'
-		else:
-			Plantao.create(
-				voluntario_id = voluntario.id,
-				tipo = 'regular',
-				inicio = hour_sys.strftime(date_time_mask),
-			)
-			status = 'OK'
-	except Exception as e:
-		Plantao.create(
-			voluntario_id = voluntario.id,
-			tipo = 'regular',
-			inicio = hour_sys.strftime(date_time_mask),
-		)
-		status = 'OK'
+	status = register_start(voluntario, 'regular')
 
 	if status == 'OK':
 		await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + "! Seu plantão **regular** começou. Gratidão!")
@@ -213,22 +219,18 @@ async def regular(ctx):
 
 @client.command()
 async def extra(ctx):
-	global tz
-	hour_sys = datetime.datetime.now(tz) #fixed a bug
-
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(TextoNoDM)
 		return
 
 	voluntario = busca_voluntario(ctx)
 
-	Plantao.create(
-		voluntario_id = voluntario.id,
-		tipo = 'extra',
-		inicio = hour_sys.strftime(date_time_mask),
-	)
+	status = register_start(voluntario, 'extra')
 
-	await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + "! Seu plantão **extra** começou. Gratidão!")
+	if status == 'OK':
+		await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + "! Seu plantão **extra** começou. Gratidão!")
+	elif status == 'UNFINISHED_EXISTS':
+		await ctx.send(str(ctx.message.author.mention) + " já existe um plantão que foi iniciado sem ter sido terminado, comando ignorado.")
 
 
 @client.command()
@@ -242,13 +244,12 @@ async def reposição(ctx):
 
 	voluntario = busca_voluntario(ctx)
 
-	Plantao.create(
-		voluntario_id = voluntario.id,
-		tipo = 'reposição',
-		inicio = hour_sys.strftime(date_time_mask),
-	)
+	status = register_start(voluntario, 'reposição')
 
-	await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + "! Seu plantão **de reposição** começou. Gratidão!")
+	if status == 'OK':
+		await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + "! Seu plantão **de reposição** começou. Gratidão!")
+	elif status == 'UNFINISHED_EXISTS':
+		await ctx.send(str(ctx.message.author.mention) + " já existe um plantão que foi iniciado sem ter sido terminado, comando ignorado.")
 
 
 @client.command()
@@ -535,38 +536,11 @@ async def RelatorioSemanal(ctx):
 			"Por favor contate a equipe de Desenvolvimento de TI")
 		return
 
-	semana_sys = datetime.datetime.now(timezone('America/Sao_Paulo')) - timedelta(days=7)
+	hoje = datetime.datetime.now(tz).strftime(date_mask)
+	semana_sys = datetime.datetime.now(tz) - timedelta(days=7)
 	semana = semana_sys.strftime(date_mask)
 
-	nome = []
-	evento = []
-	hora = []
-	comentario = []
-	dia = []
-
-	plantoes = Plantao.select(
-			Voluntario.nome,
-			Plantao.tipo,
-			Plantao.hora,
-			Plantao.dia
-		).join(Voluntario, on=(Plantao.voluntario_id == Voluntario.id).alias('voluntario')).where(Plantao.dia > semana)
-
-	for row in plantoes:
-		# coloca no array plantoes pra buscar CADA NOME encontrado na DB
-		nome.append(row.voluntario.nome)
-		evento.append(row.tipo)
-		hora.append(row.hora)
-		comentario.append(row.comentario)
-		dia.append(row.dia)
-
-	df = pd.DataFrame({
-		'Nome':nome,
-		'Evento':evento,
-		'Hora':hora,
-		'Comentário':comentario,
-		'Dia':dia
-	})
-
+	df = prep_excel_data(semana, hoje)
 	df.to_excel('./relatorios/Relatorio_Semanal_Efetivos.xlsx', index_label=False, index=False, header=True)
 	file = discord.File('./relatorios/Relatorio_Semanal_Efetivos.xlsx')
 
