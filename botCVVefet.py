@@ -94,6 +94,53 @@ def is_admin(ctx):
 		return False
 
 
+def prep_excel_data(dia_inicio, dia_fim):
+		nome = []
+		evento = []
+		dia = []
+		inicio = []
+		pausa = []
+		retorno = []
+		fim = []
+		comentario = []
+
+		plantoes = (Plantao.select(
+						Voluntario.nome,
+						Plantao.tipo,
+						Plantao.inicio,
+						Plantao.pausa,
+						Plantao.retorno,
+						Plantao.fim,
+						Plantao.comentario,
+					)
+					.join(Voluntario, on=(Plantao.voluntario_id == Voluntario.id).alias('voluntario'))
+					.where((Plantao.inicio >= dia_inicio + sod) & (Plantao.inicio <= dia_fim + eod)))
+
+		for row in plantoes:
+			# coloca no array plantoes pra buscar CADA NOME encontrado na DB
+			nome.append(row.voluntario.nome)
+			evento.append(row.tipo)
+			dia.append(row.inicio.strftime(date_mask))
+			inicio.append(row.inicio.strftime(time_mask))
+			pausa.append(row.pausa.strftime(time_mask) if row.pausa != None else '')
+			retorno.append(row.retorno.strftime(time_mask) if row.retorno != None else '')
+			fim.append(row.fim.strftime(time_mask))
+			comentario.append(row.comentario)
+
+		df = pd.DataFrame({
+			'Nome': nome,
+			'Evento': evento,
+			'Dia': dia,
+			'Inicio': inicio,
+			'Pausa': pausa,
+			'Retorno': retorno,
+			'Fim': fim,
+			'Comentário': comentario,
+		})
+
+		return df
+
+
 @client.event
 async def on_ready():
 	for guild in client.guilds:
@@ -285,7 +332,7 @@ async def voltei(ctx):
 	elif status == 'INICIO_NOT_FOUND':
 		await ctx.send(str(ctx.message.author.mention) + " seu registro de início do plantão não foi encontrado, comando ignorado.")
 	elif status == 'PAUSA_NOT_FOUND':
-		await ctx.send(str(ctx.message.author.mention) + " seu registro de início da pausa não foi encontrado.")
+		await ctx.send(str(ctx.message.author.mention) + " seu registro de início da pausa não foi encontrado, comando ignorado.")
 
 
 @client.command()
@@ -449,35 +496,7 @@ async def RelatorioHoje(ctx):
 
 	hoje = datetime.datetime.now(tz).strftime(date_mask)
 
-	nome = []
-	evento = []
-	hora = []
-	comentario = []
-	dia = []
-
-	plantoes = Plantao.select(
-			Voluntario.nome,
-			Plantao.tipo,
-			Plantao.hora,
-			Plantao.dia
-		).join(Voluntario, on=(Plantao.voluntario_id == Voluntario.id).alias('voluntario')).where(Plantao.dia == hoje)
-
-	for row in plantoes:
-		# coloca no array plantoes pra buscar CADA NOME encontrado na DB
-		nome.append(row.voluntario.nome)
-		evento.append(row.tipo)
-		hora.append(row.hora)
-		comentario.append(row.comentario)
-		dia.append(row.dia)
-
-	df = pd.DataFrame({
-		'Nome':nome,
-		'Evento':evento,
-		'Hora':hora,
-		'Comentário':comentario,
-		'Dia':dia
-	})
-
+	df = prep_excel_data(hoje, hoje)
 	df.to_excel('./relatorios/Relatorio_Diario_Efetivos.xlsx', index_label=False, index=False, header=True)
 	file = discord.File('./relatorios/Relatorio_Diario_Efetivos.xlsx')
 
@@ -498,35 +517,7 @@ async def RelatorioOntem(ctx):
 	dia_sys = datetime.datetime.now(tz) - timedelta(hours=24)
 	ontem = dia_sys.strftime(date_mask)
 
-	nome = []
-	evento = []
-	hora = []
-	comentario = []
-	dia = []
-
-	plantoes = Plantao.select(
-			Voluntario.nome,
-			Plantao.tipo,
-			Plantao.hora,
-			Plantao.dia
-		).join(Voluntario, on=(Plantao.voluntario_id == Voluntario.id).alias('voluntario')).where(Plantao.dia == ontem)
-
-	for row in plantoes:
-		# coloca no array plantoes pra buscar CADA NOME encontrado na DB
-		nome.append(row.voluntario.nome)
-		evento.append(row.tipo)
-		hora.append(row.hora)
-		comentario.append(row.comentario)
-		dia.append(row.dia)
-
-	df = pd.DataFrame({
-		'Nome':nome,
-		'Evento':evento,
-		'Hora':hora,
-		'Comentário':comentario,
-		'Dia':dia
-	})
-
+	df = prep_excel_data(ontem, ontem)
 	df.to_excel('./relatorios/Relatorio_Ontem_Efetivos.xlsx', index_label=False, index=False, header=True)
 	file = discord.File('./relatorios/Relatorio_Ontem_Efetivos.xlsx')
 
