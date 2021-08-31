@@ -64,12 +64,12 @@ TextoProblema = (". Entendi que você está com problemas técnicos em seu compu
 TextoNoDM = (":octagonal_sign: Não posso registrar comandos por DM. "
 			"Peço que registre seu comando no canal <#741743872060817440>. Gratidão! :octagonal_sign:")
 
-ErrorUnfinishedExists = (" já existe um plantão que foi iniciado sem ter sido terminado, comando ignorado.")
-ErrorInicioNotFound = (" seu registro de início do plantão não foi encontrado, comando ignorado.")
-ErrorRetornoExists = (" você já registrou o retorno da sua pausa, comando ignorado.")
-ErrorPausaNotFound = (" seu registro de início da pausa não foi encontrado, comando ignorado.")
-ErrorRetornoNotFound = (" seu registro de retorno da pausa não foi encontrado, comando ignorado")
-ErrorAlreadyFinished = (" seu plantão já foi terminado anteriormente, comando ignorado")
+ErrorUnfinishedExists = (" notei que já existe um plantão que foi iniciado sem ter sido terminado, para iniciar um novo plantão, por favor termine o anterior com **!terminei**.")
+ErrorInicioNotFound = (" opa! Você está tentando registrar algo mas não encontrei seu início do plantão. Inicie um plantão antes, por favor.")
+ErrorRetornoExists = (" pelo que vi aqui, você já registrou um retorno da sua pausa, você digitou o comando duas vezes? Por favor, verifique.")
+ErrorPausaNotFound = (" vejo que está tentando voltar de uma pausa, mas seu registro de início da pausa não foi encontrado, peço que escreva **!pausa** antes.")
+ErrorRetornoNotFound = (" ops! Vi que você está terminando um plantão sem ter retornado da pausa. Por favor, antes de terminar seu plantão use o comando **!voltei**.")
+ErrorAlreadyFinished = (" pelo que estou vendo aqui, seu plantão já foi terminado anteriormente. Você digitou o comando duas vezes? Por favor, verifique.")
 
 tz = timezone('America/Sao_Paulo')
 date_mask = '%Y-%m-%d'
