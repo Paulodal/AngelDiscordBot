@@ -64,6 +64,13 @@ TextoProblema = (". Entendi que você está com problemas técnicos em seu compu
 TextoNoDM = (":octagonal_sign: Não posso registrar comandos por DM. "
 			"Peço que registre seu comando no canal <#741743872060817440>. Gratidão! :octagonal_sign:")
 
+ErrorUnfinishedExists = (" já existe um plantão que foi iniciado sem ter sido terminado, comando ignorado.")
+ErrorInicioNotFound = (" seu registro de início do plantão não foi encontrado, comando ignorado.")
+ErrorRetornoExists = (" você já registrou o retorno da sua pausa, comando ignorado.")
+ErrorPausaNotFound = (" seu registro de início da pausa não foi encontrado, comando ignorado.")
+ErrorRetornoNotFound = (" seu registro de retorno da pausa não foi encontrado, comando ignorado")
+ErrorAlreadyFinished = (" seu plantão já foi terminado anteriormente, comando ignorado")
+
 tz = timezone('America/Sao_Paulo')
 date_mask = '%Y-%m-%d'
 time_mask = '%H:%M:%S'
@@ -89,13 +96,14 @@ def busca_voluntario(ctx):
 def is_admin(ctx):
 	f = open('./admins.JSON', 'r+')
 	data = json.load(f)
+	f.close()
 	if ctx.author.id in data:
 		return True
 	else:
 		return False
 
 
-def register_start(voluntario, tipo):
+def register_start(voluntario, tipo, comentario = ''):
 	global tz
 	hour_sys = datetime.datetime.now(tz) #fixed a bug
 	hoje = hour_sys.strftime(date_mask)
@@ -120,17 +128,20 @@ def register_start(voluntario, tipo):
 				voluntario_id = voluntario.id,
 				tipo = tipo,
 				inicio = hour_sys.strftime(date_time_mask),
+				comentario = comentario
 			)
 			status = 'OK'
 	except Exception as e:
 		Plantao.create(
 			voluntario_id = voluntario.id,
-			tipo = 'regular',
+			tipo = tipo,
 			inicio = hour_sys.strftime(date_time_mask),
+			comentario = comentario
 		)
 		status = 'OK'
 
 	return status
+
 
 def prep_excel_data(dia_inicio, dia_fim):
 		nome = []
@@ -141,6 +152,8 @@ def prep_excel_data(dia_inicio, dia_fim):
 		retorno = []
 		fim = []
 		comentario = []
+
+		print(dia_inicio, dia_fim)
 
 		plantoes = (Plantao.select(
 						Voluntario.nome,
@@ -156,6 +169,7 @@ def prep_excel_data(dia_inicio, dia_fim):
 
 		for row in plantoes:
 			# coloca no array plantoes pra buscar CADA NOME encontrado na DB
+			print(row.voluntario.nome)
 			nome.append(row.voluntario.nome)
 			evento.append(row.tipo)
 			dia.append(row.inicio.strftime(date_mask))
@@ -214,7 +228,7 @@ async def regular(ctx):
 	if status == 'OK':
 		await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + "! Seu plantão **regular** começou. Gratidão!")
 	elif status == 'UNFINISHED_EXISTS':
-		await ctx.send(str(ctx.message.author.mention) + " já existe um plantão que foi iniciado sem ter sido terminado, comando ignorado.")
+		await ctx.send(str(ctx.message.author.mention) + ErrorUnfinishedExists)
 
 
 @client.command()
@@ -230,14 +244,11 @@ async def extra(ctx):
 	if status == 'OK':
 		await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + "! Seu plantão **extra** começou. Gratidão!")
 	elif status == 'UNFINISHED_EXISTS':
-		await ctx.send(str(ctx.message.author.mention) + " já existe um plantão que foi iniciado sem ter sido terminado, comando ignorado.")
+		await ctx.send(str(ctx.message.author.mention) + ErrorUnfinishedExists)
 
 
 @client.command()
 async def reposição(ctx):
-	global tz
-	hour_sys = datetime.datetime.now(tz)
-
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(TextoNoDM)
 		return
@@ -249,7 +260,7 @@ async def reposição(ctx):
 	if status == 'OK':
 		await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + "! Seu plantão **de reposição** começou. Gratidão!")
 	elif status == 'UNFINISHED_EXISTS':
-		await ctx.send(str(ctx.message.author.mention) + " já existe um plantão que foi iniciado sem ter sido terminado, comando ignorado.")
+		await ctx.send(str(ctx.message.author.mention) + ErrorUnfinishedExists)
 
 
 @client.command()
@@ -289,9 +300,9 @@ async def pausa(ctx):
 	if status == 'OK':
 		await ctx.message.author.send("Vamos começar sua pausa, " + str(ctx.message.author.name) + "! Lembre-se do limite de 10 minutos de pausa (para voluntários de 3h) e 5 minutos (para voluntários de 1h30min) :)")
 	elif status == 'INICIO_NOT_FOUND':
-		await ctx.send(str(ctx.message.author.mention) + " seu registro de início do plantão não foi encontrado, comando ignorado.")
+		await ctx.send(str(ctx.message.author.mention) + ErrorInicioNotFound)
 	elif status == 'RETORNO_EXISTS':
-		await ctx.send(str(ctx.message.author.mention) + " você já registrou o retorno da sua pausa, comando ignorado.")
+		await ctx.send(str(ctx.message.author.mention) + ErrorRetornoExists)
 
 
 @client.command()
@@ -331,9 +342,9 @@ async def voltei(ctx):
 	if status == 'OK':
 		await ctx.message.author.send("Ok, " + str(ctx.message.author.name) + ". Já anotei seu retorno.")
 	elif status == 'INICIO_NOT_FOUND':
-		await ctx.send(str(ctx.message.author.mention) + " seu registro de início do plantão não foi encontrado, comando ignorado.")
+		await ctx.send(str(ctx.message.author.mention) + ErrorInicioNotFound)
 	elif status == 'PAUSA_NOT_FOUND':
-		await ctx.send(str(ctx.message.author.mention) + " seu registro de início da pausa não foi encontrado, comando ignorado.")
+		await ctx.send(str(ctx.message.author.mention) + ErrorPausaNotFound)
 
 
 @client.command()
@@ -375,11 +386,11 @@ async def terminei(ctx):
 	if status == 'OK':
 		await ctx.message.author.send(str(ctx.message.author.name) + TextoFim + "\n" + AVISO)
 	elif status == 'INICIO_NOT_FOUND':
-		await ctx.send(str(ctx.message.author.mention) + " seu registro de início do plantão não foi encontrado, comando ignorado.")
+		await ctx.send(str(ctx.message.author.mention) + ErrorInicioNotFound)
 	elif status == 'RETORNO_NOT_FOUND':
-		await ctx.send(str(ctx.message.author.mention) + " seu registro de retorno da pausa não foi encontrado, comando ignorado")
+		await ctx.send(str(ctx.message.author.mention) + ErrorRetornoNotFound)
 	elif status == 'ALREADY_FINISHED':
-		await ctx.send(str(ctx.message.author.mention) + " seu plantão já foi terminado anteriormente, comando ignorado")
+		await ctx.send(str(ctx.message.author.mention) + ErrorAlreadyFinished)
 
 
 @client.command()
@@ -394,24 +405,21 @@ async def substituindo(ctx):
 
 	voluntario = busca_voluntario(ctx)
 
-	Plantao.create(
-		voluntario_id = voluntario.id,
-		tipo = 'inicio substituicao',
-		dia = hour_sys.strftime(date_mask),
-		hora = hour_sys.strftime("%H:%M:%S"),
-		comentario = nome_subs
-	)
+	status = register_start(voluntario, 'reposição', nome_subs)
 
-	await ctx.message.author.send(
-		str(ctx.message.author.name) + ", entendi que você está substituindo " +
-		nome_subs + " e estou anotando essa substituição. Gratidão!")
+	if status == 'OK':
+		await ctx.message.author.send(
+			str(ctx.message.author.name) + ", entendi que você está substituindo " +
+			nome_subs + " e estou anotando essa substituição. Gratidão!")
+	elif status == 'UNFINISHED_EXISTS':
+		await ctx.send(str(ctx.message.author.mention) + ErrorUnfinishedExists)
 
 
 @client.command()
 async def apoio(ctx):
 	global tz
 	hour_sys = datetime.datetime.now(tz)
-	software = str(ctx.message.content).strip("!substituindo ")
+	software = str(ctx.message.content).strip("!apoio ")
 
 	if isinstance(ctx.message.channel, discord.channel.DMChannel):
 		await ctx.message.author.send(TextoNoDM)
@@ -419,17 +427,14 @@ async def apoio(ctx):
 
 	voluntario = busca_voluntario(ctx)
 
-	Plantao.create(
-		voluntario_id = voluntario.id,
-		tipo = 'retorno pausa',
-		dia = hour_sys.strftime(date_mask),
-		hora = hour_sys.strftime("%H:%M:%S"),
-		comentario = software
-	)
+	status = register_start(voluntario, 'apoio', software)
 
-	await ctx.message.author.send(
-		str(ctx.message.author.name) + ", entendi que você está fazendo um apoio usando o software " +
-		software + " e estou anotando esse apoio. Gratidão!")
+	if status == 'OK':
+		await ctx.message.author.send(
+			str(ctx.message.author.name) + ", entendi que você está fazendo um apoio usando o software " +
+			software + " e estou anotando esse apoio. Gratidão!")
+	elif status == 'UNFINISHED_EXISTS':
+		await ctx.send(str(ctx.message.author.mention) + ErrorUnfinishedExists)
 
 
 @client.command()
