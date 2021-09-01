@@ -70,6 +70,7 @@ ErrorRetornoExists = (" pelo que vi aqui, você já registrou um retorno da sua 
 ErrorPausaNotFound = (" vejo que está tentando voltar de uma pausa, mas seu registro de início da pausa não foi encontrado, peço que escreva **!pausa** antes.")
 ErrorRetornoNotFound = (" ops! Vi que você está terminando um plantão sem ter retornado da pausa. Por favor, antes de terminar seu plantão use o comando **!voltei**.")
 ErrorAlreadyFinished = (" pelo que estou vendo aqui, seu plantão já foi terminado anteriormente. Você digitou o comando duas vezes? Por favor, verifique.")
+ErrorPausaExists = (" notei que já existe uma pausa registrada, não é possível repetir o comando num mesmo plantão, ok?")
 
 tz = timezone('America/Sao_Paulo')
 date_mask = '%Y-%m-%d'
@@ -290,6 +291,8 @@ async def pausa(ctx):
 
 		if plantao.retorno != None:
 			status = 'RETORNO_EXISTS'
+		elif plantao.pauda != None:
+			status = 'PAUSA_EXISTS'
 		else:
 			plantao.pausa = hour_sys.strftime(date_time_mask)
 			plantao.save()
@@ -303,6 +306,8 @@ async def pausa(ctx):
 		await ctx.send(str(ctx.message.author.mention) + ErrorInicioNotFound)
 	elif status == 'RETORNO_EXISTS':
 		await ctx.send(str(ctx.message.author.mention) + ErrorRetornoExists)
+	elif status == 'PAUSA_EXISTS':
+		await ctx.send(str(ctx.message.author.mention) + ErrorPausaExists)
 
 
 @client.command()
