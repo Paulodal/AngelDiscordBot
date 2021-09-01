@@ -42,8 +42,8 @@ TextoAjuda = ("!"
 			"\n**!terminei** para terminar seu plantão.\n"
 			"\n**E para eu lhe ajudar com outros assuntos**: "
 			"\n**!doação** para eu te ajudar a utilizar tempo de doações de outro voluntário"
-			"\n**!problema**, para eu te ajudar com problemas técnicos"
-			"\n**!falha** para eu te ajudar com falhas técnicas no sistema de ramais");
+			"\n**!problema**, para eu te ajudar com problemas técnicos em seu próprio computador"
+			"\n**!falta** para eu te ajudar com faltas técnicas por problemas no sistema de ramais");
 
 TextoFim = (", seu plantão terminou. Não se esqueça de preencher o seu **diário de plantão**. É bem rapidinho. "
 			"Olha o link aqui: https://bit.ly/2Tr59q4 . Gratidão!\n\n");
@@ -52,10 +52,10 @@ TextoDoacao = ("! Entendi que você está fazendo uma doação. "
 			"Para isso, por favor preencha o diário de plantão, aqui: https://bit.ly/2Tr59q4 "
 			"para **registrar os dados de sua doação**. Gratidão!");
 
-TextoFalha = (". Entendi que você está com uma falha técnica no sistema de ramais. Vamos resolver! "
+TextoFalta = (". Entendi que você terá uma falta técnica por problemas no sistema de ramais. Vamos resolver! "
 			"Em primeiro lugar, por favor, "
 			"(1) abra um ticket com a TI aqui: https://cvv-virtual.tomticket.com/ e, depois, "
-			"(2) preencha seu diário de plantão para avisar sobre essa **falha técnica**, aqui: https://bit.ly/2Tr59q4")
+			"(2) preencha seu diário de plantão para avisar sobre essa **falta técnica**, aqui: https://bit.ly/2Tr59q4")
 
 TextoProblema = (". Entendi que você está com problemas técnicos em seu computador. "
 			"Por favor, preencha seu diário de plantão para avisar sobre esse **problema técnico** aqui: https://bit.ly/2Tr59q4 . "
@@ -169,7 +169,7 @@ def prep_excel_data(dia_inicio, dia_fim):
 
 		for row in plantoes:
 			# coloca no array plantoes pra buscar CADA NOME encontrado na DB
-			print(row.voluntario.nome)
+			# print(row.voluntario.nome)
 			nome.append(row.voluntario.nome)
 			evento.append(row.tipo)
 			dia.append(row.inicio.strftime(date_mask))
@@ -452,8 +452,8 @@ async def doacao(ctx):
 
 
 @client.command()
-async def falha(ctx):
-	await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + TextoFalha)
+async def falta(ctx):
+	await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + TextoFalta)
 
 
 @client.command()
