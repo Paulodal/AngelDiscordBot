@@ -291,7 +291,7 @@ async def pausa(ctx):
 
 		if plantao.retorno != None:
 			status = 'RETORNO_EXISTS'
-		elif plantao.pauda != None:
+		elif plantao.pausa != None:
 			status = 'PAUSA_EXISTS'
 		else:
 			plantao.pausa = hour_sys.strftime(date_time_mask)
