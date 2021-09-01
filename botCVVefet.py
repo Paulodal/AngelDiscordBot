@@ -52,7 +52,7 @@ TextoDoacao = ("! Entendi que você está fazendo uma doação. "
 			"Para isso, por favor preencha o diário de plantão, aqui: https://bit.ly/2Tr59q4 "
 			"para **registrar os dados de sua doação**. Gratidão!");
 
-TextoFalta = (". Entendi que você terá uma falta técnica por problemas no sistema de ramais. Vamos resolver! "
+TextoFalha = (". Entendi que você está relatando uma falha técnica no sistema de ramais. Vamos resolver! "
 			"Em primeiro lugar, por favor, "
 			"(1) abra um ticket com a TI aqui: https://cvv-virtual.tomticket.com/ e, depois, "
 			"(2) preencha seu diário de plantão para avisar sobre essa **falta técnica**, aqui: https://bit.ly/2Tr59q4")
@@ -70,6 +70,7 @@ ErrorRetornoExists = (" pelo que vi aqui, você já registrou um retorno da sua 
 ErrorPausaNotFound = (" vejo que está tentando voltar de uma pausa, mas seu registro de início da pausa não foi encontrado, peço que escreva **!pausa** antes.")
 ErrorRetornoNotFound = (" ops! Vi que você está terminando um plantão sem ter retornado da pausa. Por favor, antes de terminar seu plantão use o comando **!voltei**.")
 ErrorAlreadyFinished = (" pelo que estou vendo aqui, seu plantão já foi terminado anteriormente. Você digitou o comando duas vezes? Por favor, verifique.")
+ErrorPausaExists = (" opa! Já encontrei uma pausa não finalizada. Você digitou o comando de pausa duas vezes? Por favor, verifique.")
 
 tz = timezone('America/Sao_Paulo')
 date_mask = '%Y-%m-%d'
@@ -153,7 +154,7 @@ def prep_excel_data(dia_inicio, dia_fim):
 		fim = []
 		comentario = []
 
-		print(dia_inicio, dia_fim)
+		# print(dia_inicio, dia_fim)
 
 		plantoes = (Plantao.select(
 						Voluntario.nome,
@@ -176,7 +177,7 @@ def prep_excel_data(dia_inicio, dia_fim):
 			inicio.append(row.inicio.strftime(time_mask_report))
 			pausa.append(row.pausa.strftime(time_mask_report) if row.pausa != None else '')
 			retorno.append(row.retorno.strftime(time_mask_report) if row.retorno != None else '')
-			fim.append(row.fim.strftime(time_mask_report))
+			fim.append(row.fim.strftime(time_mask_report) if row.fim != None else '')
 			comentario.append(row.comentario)
 
 		df = pd.DataFrame({
@@ -201,8 +202,6 @@ async def on_ready():
 
 
 ## A partir daqui, o Bot está ouvindo comandos e adicionando os dados no dataframe que foi criado lá em cima.
-## NOTA: alguns comandos estão repetidos para facilitar o envio de comandos pelos voluntários. Um exemplo é o comando "ajuda" e "Ajuda". Basta alterar um e copiar integralmente a alteração para o mesmo.
-
 
 @client.command()
 async def ajuda(ctx):
@@ -290,6 +289,8 @@ async def pausa(ctx):
 
 		if plantao.retorno != None:
 			status = 'RETORNO_EXISTS'
+		# if plantao.pausa != None: #TESTE
+		# 	status = 'PAUSA_EXISTS'
 		else:
 			plantao.pausa = hour_sys.strftime(date_time_mask)
 			plantao.save()
@@ -303,6 +304,8 @@ async def pausa(ctx):
 		await ctx.send(str(ctx.message.author.mention) + ErrorInicioNotFound)
 	elif status == 'RETORNO_EXISTS':
 		await ctx.send(str(ctx.message.author.mention) + ErrorRetornoExists)
+	# elif status == 'PAUSA_EXISTS':
+	# 	await ctx.sent(str(ctx.message.author.mention) + ErrorPausaExists) #TESTE
 
 
 @client.command()
@@ -329,7 +332,8 @@ async def voltei(ctx):
 				)
 				.order_by(Plantao.inicio.desc())
 				.get())
-
+		# if plantao.retorno != None:
+		# 	status = 'RETORNO_EXISTS' #teste
 		if plantao.pausa == None:
 			status = 'PAUSA_NOT_FOUND'
 		else:
@@ -343,6 +347,8 @@ async def voltei(ctx):
 		await ctx.message.author.send("Ok, " + str(ctx.message.author.name) + ". Já anotei seu retorno.")
 	elif status == 'INICIO_NOT_FOUND':
 		await ctx.send(str(ctx.message.author.mention) + ErrorInicioNotFound)
+	# elif status == 'RETORNO_EXISTS':
+	# 	await ctx.send(str(ctx.message.author.mention) + ErrorRetornoExists) #teste
 	elif status == 'PAUSA_NOT_FOUND':
 		await ctx.send(str(ctx.message.author.mention) + ErrorPausaNotFound)
 
@@ -452,12 +458,12 @@ async def doacao(ctx):
 
 
 @client.command()
-async def falta(ctx):
-	await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + TextoFalta)
+async def falha(ctx):
+	await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + TextoFalha)
 
 
 @client.command()
-async def Problema(ctx):
+async def problema(ctx):
 	await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + TextoProblema)
 
 
