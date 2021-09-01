@@ -289,8 +289,8 @@ async def pausa(ctx):
 
 		if plantao.retorno != None:
 			status = 'RETORNO_EXISTS'
-		# if plantao.pausa != None: #TESTE
-		# 	status = 'PAUSA_EXISTS'
+		elif plantao.pausa != None:
+			status = 'PAUSA_EXISTS'
 		else:
 			plantao.pausa = hour_sys.strftime(date_time_mask)
 			plantao.save()
@@ -304,8 +304,8 @@ async def pausa(ctx):
 		await ctx.send(str(ctx.message.author.mention) + ErrorInicioNotFound)
 	elif status == 'RETORNO_EXISTS':
 		await ctx.send(str(ctx.message.author.mention) + ErrorRetornoExists)
-	# elif status == 'PAUSA_EXISTS':
-	# 	await ctx.sent(str(ctx.message.author.mention) + ErrorPausaExists) #TESTE
+	elif status == 'PAUSA_EXISTS':
+		await ctx.send(str(ctx.message.author.mention) + ErrorPausaExists)
 
 
 @client.command()
