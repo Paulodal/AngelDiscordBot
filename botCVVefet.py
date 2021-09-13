@@ -42,8 +42,8 @@ TextoAjuda = ("!"
 			"\n**!terminei** para terminar seu plantão.\n"
 			"\n**E para eu lhe ajudar com outros assuntos**: "
 			"\n**!doação** para eu te ajudar a utilizar tempo de doações de outro voluntário"
-			"\n**!problema**, para eu te ajudar com problemas técnicos"
-			"\n**!falha** para eu te ajudar com falhas técnicas no sistema de ramais");
+			"\n**!problema**, para eu te ajudar com problemas técnicos em seu próprio computador"
+			"\n**!falta** para eu te ajudar com faltas técnicas por problemas no sistema de ramais");
 
 TextoFim = (", seu plantão terminou. Não se esqueça de preencher o seu **diário de plantão**. É bem rapidinho. "
 			"Olha o link aqui: https://bit.ly/2Tr59q4 . Gratidão!\n\n");
@@ -52,10 +52,10 @@ TextoDoacao = ("! Entendi que você está fazendo uma doação. "
 			"Para isso, por favor preencha o diário de plantão, aqui: https://bit.ly/2Tr59q4 "
 			"para **registrar os dados de sua doação**. Gratidão!");
 
-TextoFalha = (". Entendi que você está com uma falha técnica no sistema de ramais. Vamos resolver! "
+TextoFalha = (". Entendi que você está relatando uma falha técnica no sistema de ramais. Vamos resolver! "
 			"Em primeiro lugar, por favor, "
 			"(1) abra um ticket com a TI aqui: https://cvv-virtual.tomticket.com/ e, depois, "
-			"(2) preencha seu diário de plantão para avisar sobre essa **falha técnica**, aqui: https://bit.ly/2Tr59q4")
+			"(2) preencha seu diário de plantão para avisar sobre essa **falta técnica**, aqui: https://bit.ly/2Tr59q4")
 
 TextoProblema = (". Entendi que você está com problemas técnicos em seu computador. "
 			"Por favor, preencha seu diário de plantão para avisar sobre esse **problema técnico** aqui: https://bit.ly/2Tr59q4 . "
@@ -70,7 +70,7 @@ ErrorRetornoExists = (" pelo que vi aqui, você já registrou um retorno da sua 
 ErrorPausaNotFound = (" vejo que está tentando voltar de uma pausa, mas seu registro de início da pausa não foi encontrado, peço que escreva **!pausa** antes.")
 ErrorRetornoNotFound = (" ops! Vi que você está terminando um plantão sem ter retornado da pausa. Por favor, antes de terminar seu plantão use o comando **!voltei**.")
 ErrorAlreadyFinished = (" pelo que estou vendo aqui, seu plantão já foi terminado anteriormente. Você digitou o comando duas vezes? Por favor, verifique.")
-ErrorPausaExists = (" notei que já existe uma pausa registrada, não é possível repetir o comando num mesmo plantão, ok?")
+ErrorPausaExists = (" opa! Já encontrei uma pausa não finalizada. Você digitou o comando de pausa duas vezes? Por favor, verifique.")
 
 tz = timezone('America/Sao_Paulo')
 date_mask = '%Y-%m-%d'
@@ -154,7 +154,7 @@ def prep_excel_data(dia_inicio, dia_fim):
 		fim = []
 		comentario = []
 
-		print(dia_inicio, dia_fim)
+		# print(dia_inicio, dia_fim)
 
 		plantoes = (Plantao.select(
 						Voluntario.nome,
@@ -170,14 +170,14 @@ def prep_excel_data(dia_inicio, dia_fim):
 
 		for row in plantoes:
 			# coloca no array plantoes pra buscar CADA NOME encontrado na DB
-			print(row.voluntario.nome)
+			# print(row.voluntario.nome)
 			nome.append(row.voluntario.nome)
 			evento.append(row.tipo)
 			dia.append(row.inicio.strftime(date_mask))
 			inicio.append(row.inicio.strftime(time_mask_report))
 			pausa.append(row.pausa.strftime(time_mask_report) if row.pausa != None else '')
 			retorno.append(row.retorno.strftime(time_mask_report) if row.retorno != None else '')
-			fim.append(row.fim.strftime(time_mask_report))
+			fim.append(row.fim.strftime(time_mask_report) if row.fim != None else '')
 			comentario.append(row.comentario)
 
 		df = pd.DataFrame({
@@ -202,8 +202,6 @@ async def on_ready():
 
 
 ## A partir daqui, o Bot está ouvindo comandos e adicionando os dados no dataframe que foi criado lá em cima.
-## NOTA: alguns comandos estão repetidos para facilitar o envio de comandos pelos voluntários. Um exemplo é o comando "ajuda" e "Ajuda". Basta alterar um e copiar integralmente a alteração para o mesmo.
-
 
 @client.command()
 async def ajuda(ctx):
@@ -334,7 +332,8 @@ async def voltei(ctx):
 				)
 				.order_by(Plantao.inicio.desc())
 				.get())
-
+		# if plantao.retorno != None:
+		# 	status = 'RETORNO_EXISTS' #teste
 		if plantao.pausa == None:
 			status = 'PAUSA_NOT_FOUND'
 		else:
@@ -348,6 +347,8 @@ async def voltei(ctx):
 		await ctx.message.author.send("Ok, " + str(ctx.message.author.name) + ". Já anotei seu retorno.")
 	elif status == 'INICIO_NOT_FOUND':
 		await ctx.send(str(ctx.message.author.mention) + ErrorInicioNotFound)
+	# elif status == 'RETORNO_EXISTS':
+	# 	await ctx.send(str(ctx.message.author.mention) + ErrorRetornoExists) #teste
 	elif status == 'PAUSA_NOT_FOUND':
 		await ctx.send(str(ctx.message.author.mention) + ErrorPausaNotFound)
 
@@ -462,7 +463,7 @@ async def falha(ctx):
 
 
 @client.command()
-async def Problema(ctx):
+async def problema(ctx):
 	await ctx.message.author.send("Oi, " + str(ctx.message.author.name) + TextoProblema)
 
 
@@ -477,7 +478,7 @@ async def adicionaadmin(ctx):
 	f = open('./admins.JSON', 'r+')
 	data = json.load(f)
 	data.append(int(str(ctx.message.content).strip("!adicionaadmin ")))
-	with open('./admins.json', 'w') as output:
+	with open('./admins.JSON', 'w') as output:
 		json.dump(data, output)
 	return await ctx.send(str(ctx.message.author.mention) + " Ok! Adicionei um admin")
 
