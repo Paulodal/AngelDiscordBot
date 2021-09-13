@@ -478,7 +478,7 @@ async def adicionaadmin(ctx):
 	f = open('./admins.JSON', 'r+')
 	data = json.load(f)
 	data.append(int(str(ctx.message.content).strip("!adicionaadmin ")))
-	with open('./admins.json', 'w') as output:
+	with open('./admins.JSON', 'w') as output:
 		json.dump(data, output)
 	return await ctx.send(str(ctx.message.author.mention) + " Ok! Adicionei um admin")
 
