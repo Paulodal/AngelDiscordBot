@@ -43,7 +43,7 @@ TextoAjuda = ("!"
 			"\n**E para eu lhe ajudar com outros assuntos**: "
 			"\n**!doação** para eu te ajudar a utilizar tempo de doações de outro voluntário"
 			"\n**!problema**, para eu te ajudar com problemas técnicos em seu próprio computador"
-			"\n**!falta** para eu te ajudar com faltas técnicas por problemas no sistema de ramais");
+			"\n**!falha** para eu te ajudar com faltas técnicas por problemas no sistema de ramais");
 
 TextoFim = (", seu plantão terminou. Não se esqueça de preencher o seu **diário de plantão**. É bem rapidinho. "
 			"Olha o link aqui: https://bit.ly/2Tr59q4 . Gratidão!\n\n");
